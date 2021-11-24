@@ -4,4 +4,4 @@ set CXX=g++
 set FLAGS=-Wall -Wextra -pedantic -std=c++17
 set FILES=main.cpp
 
-call %CXX% %FLAGS% -o maidai %FILES%
+call %CXX% %FLAGS% -o maidai %FILES% -lWinmm
