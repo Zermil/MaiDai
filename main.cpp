@@ -20,19 +20,52 @@ enum MIDIEvent : uint8_t {
     NOTE_ON = 0x90,
 };
 
+enum MIDINoteName {
+    NOTE_C = 0,
+    NOTE_CS,
+    NOTE_D,
+    NOTE_DS,
+    NOTE_E,
+    NOTE_F,
+    NOTE_FS,
+    NOTE_G,
+    NOTE_GS,
+    NOTE_A,
+    NOTE_AS,
+    NOTE_B,
+};
+
+struct MIDINote {
+    uint8_t octave;
+    MIDINoteName note;
+};
+
 void no_error(const MMRESULT& result)
 {
     // TODO(Aiden): Properly handle ERROR(s).
     
     if (result != MMSYSERR_NOERROR) {
-	fprintf(stderr, "Error with MIDI device!");
+	fprintf(stderr, "Error calling one of the MIDI functions!");
 	exit(1);
     }
 } 
 
-inline std::string get_note_as_letter(const uint8_t& note_number) noexcept
+void cleanup(const HMIDIIN& handle)
 {
-    return note_letters[note_number % 12] + std::to_string((note_number / 12) - 1);
+    if (handle) {
+	midiInStop(handle);
+	midiInClose(handle);
+    }
+}
+
+MIDINote get_note_from_number(const uint8_t& note_number)
+{
+    MIDINote midi_note;
+
+    midi_note.note = static_cast<MIDINoteName>(note_number % 12);
+    midi_note.octave = (note_number / 12) - 1;
+    
+    return midi_note;
 }
 
 void CALLBACK MidiInProc(HMIDIIN hMidiIn, UINT wMsg, DWORD_PTR dwInstance, DWORD_PTR dwParam1, DWORD_PTR dwParam2)
@@ -49,10 +82,10 @@ void CALLBACK MidiInProc(HMIDIIN hMidiIn, UINT wMsg, DWORD_PTR dwInstance, DWORD
 	    uint8_t note_number = (dwParam1 >> 8 * 1) & 0xff;
 	    uint8_t velocity = (dwParam1 >> 8 * 2) & 0xff;
 
-	    std::string note_letter = get_note_as_letter(note_number);
+	    MIDINote midi_note = get_note_from_number(note_number);
 	    
 	    printf("================\n");
-	    printf("Note: %s, Velocity: %d\n", note_letter.c_str(), velocity);
+	    printf("Note: %s Octave: %d, Velocity: %d\n", note_letters[midi_note.note].c_str(), midi_note.octave, velocity);
 	}
     }
 }
@@ -90,10 +123,8 @@ int main(int argc, char* argv[])
 		    break;
 	    }
 	}
-
-	no_error(midiInStop(handle_in));
     }
-    no_error(midiInClose(handle_in));
-    
+
+    cleanup(handle_in);
     return 0;
 }
