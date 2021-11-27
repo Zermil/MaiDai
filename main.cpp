@@ -2,6 +2,7 @@
 #include <cstdlib>
 #include <cstdint>
 #include <string>
+#include <cmath>
 
 // Windows specific
 #define WIN32_LEAN_AND_MEAN
@@ -14,6 +15,7 @@
 #pragma comment(lib, "winmm.lib")
 
 static const std::string note_letters[12] = { "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B" };
+static constexpr double FREQ_RATIO = 1.05946309436;
 
 enum MIDIEvent : uint8_t {
     NOTE_OFF = 0x80,
@@ -36,8 +38,9 @@ enum MIDINoteName {
 };
 
 struct MIDINote {
-    uint8_t octave;
     MIDINoteName note;
+    int octave;
+    double frequency;
 };
 
 void no_error(const MMRESULT& result)
@@ -45,25 +48,32 @@ void no_error(const MMRESULT& result)
     // TODO(Aiden): Properly handle ERROR(s).
     
     if (result != MMSYSERR_NOERROR) {
-	fprintf(stderr, "Error calling one of the MIDI functions!");
-	exit(1);
+      fprintf(stderr, "Error calling one of the MIDI functions!");
+      exit(1);
     }
 } 
 
 void cleanup(const HMIDIIN& handle)
 {
     if (handle) {
-	midiInStop(handle);
-	midiInClose(handle);
+      midiInStop(handle);
+      midiInClose(handle);
     }
 }
 
-MIDINote get_note_from_number(const uint8_t& note_number)
+MIDINote get_note_from_number(uint8_t note_number)
 {
-    MIDINote midi_note;
+    MIDINoteName note = static_cast<MIDINoteName>(note_number % 12);
+    int octave = (note_number / 12) - 1;
 
-    midi_note.note = static_cast<MIDINoteName>(note_number % 12);
-    midi_note.octave = (note_number / 12) - 1;
+    int half_steps_count = note + 12 * octave - 57;
+    double frequency = 440 * pow(FREQ_RATIO, half_steps_count);
+    
+    MIDINote midi_note = {
+      note,
+      octave,
+      frequency
+    };
     
     return midi_note;
 }
@@ -76,17 +86,21 @@ void CALLBACK MidiInProc(HMIDIIN hMidiIn, UINT wMsg, DWORD_PTR dwInstance, DWORD
     (void) dwParam2; // Timestamp
 
     if (wMsg == MIM_DATA) {
-	uint8_t msg_indication = (dwParam1 >> 8 * 0) & 0xff;
-	
-	if (msg_indication == NOTE_OFF || msg_indication == NOTE_ON) {
-	    uint8_t note_number = (dwParam1 >> 8 * 1) & 0xff;
-	    uint8_t velocity = (dwParam1 >> 8 * 2) & 0xff;
+      uint8_t msg_indication = (dwParam1 >> 8 * 0) & 0xff;
+      
+      if (msg_indication == NOTE_OFF || msg_indication == NOTE_ON) {
+          uint8_t note_number = (dwParam1 >> 8 * 1) & 0xff;
+          uint8_t velocity = (dwParam1 >> 8 * 2) & 0xff;
 
-	    MIDINote midi_note = get_note_from_number(note_number);
-	    
-	    printf("================\n");
-	    printf("Note: %s Octave: %d, Velocity: %d\n", note_letters[midi_note.note].c_str(), midi_note.octave, velocity);
-	}
+          MIDINote midi_note = get_note_from_number(note_number);
+          
+          printf("================\n");
+          printf("Note: %s Octave: %d Frequency: %.2f, Velocity: %d\n",
+               note_letters[midi_note.note].c_str(),
+               midi_note.octave,
+               midi_note.frequency,
+               velocity);
+      }
     }
 }
 
@@ -107,22 +121,22 @@ int main(int argc, char* argv[])
     
     no_error(midiInOpen(&handle_in, 0, reinterpret_cast<DWORD_PTR>(MidiInProc), 0, CALLBACK_FUNCTION));
     {
-	bool is_playing = true;
-	char c;
+      bool is_playing = true;
+      char c;
 
-	no_error(midiInStart(handle_in));
-	printf("Started receiving input, press [Q] to exit...\n");
+      no_error(midiInStart(handle_in));
+      printf("Started receiving input, press [Q] to exit...\n");
 
-	while (is_playing) {
-	    c = _getch();
+      while (is_playing) {
+          c = _getch();
 
-	    switch (c) {
-		case 113:
-		case 81:
-		    is_playing = false;
-		    break;
-	    }
-	}
+          switch (c) {
+            case 113:
+            case 81:
+                is_playing = false;
+                break;
+          }
+      }
     }
 
     cleanup(handle_in);
