@@ -22,7 +22,7 @@
 
 static const std::string note_letters[12] = { "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B" };
 static constexpr double FREQ_RATIO = 1.05946309436;
-static output_settings void;
+static output_settings settings;
 
 enum MIDIEvent : uint8_t {
     NOTE_OFF = 0x80,
@@ -50,7 +50,7 @@ struct MIDINote {
     double frequency;
 };
 
-settings no_error(const MMRESULT& result)
+void no_error(const MMRESULT& result)
 {
     // TODO(Aiden): Properly handle ERROR(s).
     
