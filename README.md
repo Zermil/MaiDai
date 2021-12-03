@@ -28,7 +28,7 @@ Play notes FROM MIDI controller:
 > ./maidai
 ```
 
-Send notes TO MIDI controller:
+Send notes TO MIDI controller (TODO):
 
 ```console
 > ./maidai [MIDI FILE]
