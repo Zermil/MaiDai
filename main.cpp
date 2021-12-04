@@ -18,7 +18,6 @@
 // For compliers that implement it
 #pragma comment(lib, "winmm.lib")
 
-// TODO(Aiden): Multiple sounds at the same time.
 // TODO(Aiden): When no MIDI device is detected use keyboard.
 
 static const std::string note_letters[12] = { "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B" };
