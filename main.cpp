@@ -67,8 +67,6 @@ void cleanup(const HMIDIIN& handle)
       midiInStop(handle);
       midiInClose(handle);
     }
-
-    windioDestroy();
 }
 
 MIDINote get_note_from_number(uint8_t note_number)
@@ -106,7 +104,7 @@ void CALLBACK MidiInProc(HMIDIIN hMidiIn, UINT wMsg, DWORD_PTR dwInstance, DWORD
 	      MIDINote midi_note = get_note_from_number(note_number);
 
 	      frequencies.push_back(midi_note.frequency);
-	      windioPlayMultiple(frequencies);
+	      settings.windioPlayMultiple(frequencies);
 	      
 	      printf("================\n");
 	      printf("Note: %s Octave: %d Frequency: %.2f, Velocity: %d\n",
@@ -120,7 +118,7 @@ void CALLBACK MidiInProc(HMIDIIN hMidiIn, UINT wMsg, DWORD_PTR dwInstance, DWORD
 	      MIDINote midi_note = get_note_from_number(note_number);
 	      frequencies.erase(std::remove(frequencies.begin(), frequencies.end(), midi_note.frequency), frequencies.end());
 	      
-	      windioPlayMultiple(frequencies);
+	      settings.windioPlayMultiple(frequencies);
 	  } break;
       }
     }
@@ -136,7 +134,6 @@ int main(int argc, char* argv[])
     MIDIINCAPS caps = {};
     HMIDIIN handle_in;
 
-    windioInitialize(&settings);
     no_error(midiInGetDevCaps(0, &caps, sizeof(caps)));
 
     printf("Input MIDI devices found: %d\n", devices);
