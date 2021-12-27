@@ -21,24 +21,24 @@
 // TODO(Aiden): ADSR, more pleasant sounds.
 // TODO(Aiden): Ensure that chords sound fine.
 
-#ifndef PI
-#define PI 3.141592653
+#ifndef WINDIO_PI
+#define WINDIO_PI 3.141592653
 #endif
 
-#ifndef BLOCKS_SZ
-#define BLOCKS_SZ 8
+#ifndef WINDIO_BLOCKS_SZ
+#define WINDIO_BLOCKS_SZ 8
 #endif
 
-#ifndef SAMPLES_SZ
-#define SAMPLES_SZ 256
+#ifndef WINDIO_SAMPLES_SZ
+#define WINDIO_SAMPLES_SZ 256
 #endif
 
-#ifndef SAMPLE_RATE
-#define SAMPLE_RATE 44100
+#ifndef WINDIO_SAMPLE_RATE
+#define WINDIO_SAMPLE_RATE 44100
 #endif
 
-#ifndef TIME_STEP
-#define TIME_STEP (1.0f / SAMPLE_RATE)
+#ifndef WINDIO_TIME_STEP
+#define WINDIO_TIME_STEP (1.0f / WINDIO_SAMPLE_RATE)
 #endif
 
 enum class Wave {
@@ -51,9 +51,8 @@ struct output_settings {
     output_settings();
     ~output_settings();
 
-    inline double fav(const double& f) noexcept { return f * 2.0 * PI; } // Frequency as angular velocity
+    inline double fav(const double& f) const noexcept { return f * 2.0 * WINDIO_PI; } // Frequency as angular velocity
     double get_sound_frequency();
-    void windioDestroy();
     void windioPlay(double frequency, Wave wave, double volume);
     void windioPlayMultiple(const std::vector<double>& frequencies, Wave wave, double volume);
     void windioStop();
@@ -67,6 +66,8 @@ struct output_settings {
     // We are all consenting adults :)
     void windioPlayThread();
     static void CALLBACK waveOutProc(HWAVEOUT hwo, UINT uMsg, DWORD_PTR dwInstance, DWORD_PTR dwParam1, DWORD_PTR dwParam2);
+    void error(const char* err_msg);
+    WAVEFORMATEX initialize_wave_struct();
     
     HWAVEOUT device;
     WAVEHDR* wave_hdr;
@@ -76,28 +77,12 @@ struct output_settings {
     std::atomic<bool> play_music;
     std::thread music_thread;
     std::mutex mux_play;
-    std::condition_variable loop_again;
-    
-    void error(const char* err_msg);
+    std::condition_variable loop_again;    
 };
 
 #endif // WINDIO_HPP
-#ifdef WINDIO_IMPLEMENTATION
 
-static WAVEFORMATEX initialize_wave_struct()
-{
-    WAVEFORMATEX wave_bin_hdr = {};
-    
-    wave_bin_hdr.wFormatTag = WAVE_FORMAT_PCM;
-    wave_bin_hdr.nSamplesPerSec = SAMPLE_RATE;
-    wave_bin_hdr.nChannels = 1;
-    wave_bin_hdr.wBitsPerSample = 16;
-    wave_bin_hdr.nBlockAlign = (wave_bin_hdr.nChannels * (wave_bin_hdr.wBitsPerSample / 8));
-    wave_bin_hdr.nAvgBytesPerSec = (wave_bin_hdr.nSamplesPerSec * wave_bin_hdr.nBlockAlign);
-    wave_bin_hdr.cbSize = 0;
-    
-    return wave_bin_hdr;
-}
+#ifdef WINDIO_IMPLEMENTATION
 
 void CALLBACK output_settings::waveOutProc(HWAVEOUT hwo, UINT uMsg, DWORD_PTR dwInstance, DWORD_PTR dwParam1, DWORD_PTR dwParam2)
 {
@@ -130,30 +115,30 @@ output_settings::output_settings()
 	error("ERROR: Default audio output device could not be properly opened!\n");
     }
 
-    wave_hdr = new WAVEHDR[BLOCKS_SZ];
+    wave_hdr = new WAVEHDR[WINDIO_BLOCKS_SZ];
 
     if (wave_hdr == nullptr) {
 	error("ERROR: Could not allocate enough memory for WAVEHDR\n");
     }
 
-    block = new short[BLOCKS_SZ * SAMPLES_SZ];
+    block = new short[WINDIO_BLOCKS_SZ * WINDIO_SAMPLES_SZ];
 
     if (block == nullptr) {
 	error("ERROR: Could not allocate enough memory for a block of samples\n");
     }
     
-    memset(wave_hdr, 0, sizeof(WAVEHDR) * BLOCKS_SZ);
-    memset(block, 0, sizeof(short) * BLOCKS_SZ * SAMPLES_SZ);
+    memset(wave_hdr, 0, sizeof(WAVEHDR) * WINDIO_BLOCKS_SZ);
+    memset(block, 0, sizeof(short) * WINDIO_BLOCKS_SZ * WINDIO_SAMPLES_SZ);
 
     // wave_hdr will be pointing to data from block
-    for (DWORD i = 0; i < BLOCKS_SZ; ++i) {
-	wave_hdr[i].dwBufferLength = SAMPLES_SZ * sizeof(short);
-	wave_hdr[i].lpData = reinterpret_cast<LPSTR>(((block + (i * SAMPLES_SZ))));
+    for (DWORD i = 0; i < WINDIO_BLOCKS_SZ; ++i) {
+	wave_hdr[i].dwBufferLength = WINDIO_SAMPLES_SZ * sizeof(short);
+	wave_hdr[i].lpData = reinterpret_cast<LPSTR>(((block + (i * WINDIO_SAMPLES_SZ))));
     }
 
     // Start music output thread
     global_time = 0.0;
-    free_blocks = BLOCKS_SZ;
+    free_blocks = WINDIO_BLOCKS_SZ;
     frequency = 0.0;
     volume = 0.2;
     wave = Wave::SIN;
@@ -177,6 +162,21 @@ output_settings::~output_settings()
 
     waveOutReset(device);
     waveOutClose(device);
+}
+
+WAVEFORMATEX output_settings::initialize_wave_struct()
+{
+    WAVEFORMATEX wave_bin_hdr = {};
+    
+    wave_bin_hdr.wFormatTag = WAVE_FORMAT_PCM;
+    wave_bin_hdr.nSamplesPerSec = WINDIO_SAMPLE_RATE;
+    wave_bin_hdr.nChannels = 1;
+    wave_bin_hdr.wBitsPerSample = 16;
+    wave_bin_hdr.nBlockAlign = (wave_bin_hdr.nChannels * (wave_bin_hdr.wBitsPerSample / 8));
+    wave_bin_hdr.nAvgBytesPerSec = (wave_bin_hdr.nSamplesPerSec * wave_bin_hdr.nBlockAlign);
+    wave_bin_hdr.cbSize = 0;
+    
+    return wave_bin_hdr;
 }
 
 void output_settings::error(const char* err_msg)
@@ -237,7 +237,7 @@ double output_settings::get_sound_frequency()
 	case Wave::SQA:
 	    return sin(fav(frequency) * global_time) > 0.0 ? 1.0 : -1.0;
 	case Wave::TRI:
-	    return asin(sin(fav(frequency) * global_time)) * (2.0 / PI);
+	    return asin(sin(fav(frequency) * global_time)) * (2.0 / WINDIO_PI);
 	default:
 	    assert(false && "Unreachable, invalid wave provided!");
     }
@@ -268,11 +268,11 @@ void output_settings::windioPlayThread()
 	    }
 	}
 
-	for (DWORD i = 0; i < SAMPLES_SZ; ++i) {
+	for (DWORD i = 0; i < WINDIO_SAMPLES_SZ; ++i) {
 	    short sample_freq = static_cast<short>((get_sound_frequency() * volume) * SHRT_MAX);
 
-	    block[(current_block * SAMPLES_SZ) + i] = sample_freq;
-	    global_time = (global_time + TIME_STEP);
+	    block[(current_block * WINDIO_SAMPLES_SZ) + i] = sample_freq;
+	    global_time = (global_time + WINDIO_TIME_STEP);
 	}
     
 	MMRESULT prepare_result = waveOutPrepareHeader(device, &wave_hdr[current_block], sizeof(WAVEHDR));
@@ -287,7 +287,7 @@ void output_settings::windioPlayThread()
 	    error("ERROR: Could not send audio to output device\n");
 	}
 
-	current_block = (current_block + 1) % BLOCKS_SZ;
+	current_block = (current_block + 1) % WINDIO_BLOCKS_SZ;
     }
 }
 
