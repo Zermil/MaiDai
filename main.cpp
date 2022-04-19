@@ -111,7 +111,7 @@ int main(int argc, char* argv[])
     HMIDIIN handle;
     MMRESULT device_result = midiInGetDevCaps(0, &caps, sizeof(caps));
 
-    // TODO: When no MIDI device is detected use keyboard.
+    // TODO(#1): When no MIDI device is detected use keyboard.
     assert((device_result == MMSYSERR_NOERROR) && "[ERROR]: No MIDI device found\n");
     windioInitializeSettings(settings);
     
