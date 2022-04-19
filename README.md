@@ -1,7 +1,5 @@
 # MaiDai
 
-***IN ACTIVE DEVELOPMENT***
-
 MIDI 'controller' written in C++ (the fundamentals/basics of it) for Windows,
 it connects to your MIDI device and outputs sound based on which 'note' you pressed.
 Alternatively it sends signal TO your MIDI device from a midi file, essentialy 'telling' it what to play.
@@ -12,7 +10,7 @@ be the case, try higher octave notes.
 ## Requirements
 
 - Windows OS
-- ...and that's it, this project does not use any other external dependencies, if something's broken, it is 100% my fault.
+- ...and that's it, this project does not use any other external dependencies (for now), if something's broken, it is 100% my fault.
 
 ## Quick start
 
