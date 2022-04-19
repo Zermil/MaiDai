@@ -143,7 +143,8 @@ int main(int argc, char* argv[])
     }
 
     midiInStop(handle);
-    midiInClose(handle);
+    midiInClose(handle);    
+    windioUninitializeSettings(settings);
     
     return 0;
 }
